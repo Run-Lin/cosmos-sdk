@@ -68,6 +68,9 @@ type BaseApp struct {
 	deliverState     *state                  // for DeliverTx
 	signedValidators []abci.SigningValidator // absent validators from begin block
 
+	// minimum fees for spam prevention
+	minimumFees sdk.Coins
+
 	// flag for sealing
 	sealed bool
 }
@@ -188,12 +191,12 @@ func (app *BaseApp) initFromStore(mainKey sdk.StoreKey) error {
 	return nil
 }
 
+// SetMinimumFees sets the minimum fees.
+func (app *BaseApp) SetMinimumFees(fees sdk.Coins) { app.minimumFees = fees }
+
 // NewContext returns a new Context with the correct store, the given header, and nil txBytes.
 func (app *BaseApp) NewContext(isCheckTx bool, header abci.Header) sdk.Context {
-	if isCheckTx {
-		return sdk.NewContext(app.checkState.ms, header, true, app.Logger)
-	}
-	return sdk.NewContext(app.deliverState.ms, header, false, app.Logger)
+	return sdk.NewContext(app.checkState.ms, header, isCheckTx, app.Logger).WithMinimumFees(app.minimumFees)
 }
 
 type state struct {
@@ -209,7 +212,7 @@ func (app *BaseApp) setCheckState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.checkState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, true, app.Logger),
+		ctx: sdk.NewContext(ms, header, true, app.Logger).WithMinimumFees(app.minimumFees),
 	}
 }
 
@@ -217,7 +220,7 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.deliverState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.Logger),
+		ctx: sdk.NewContext(ms, header, false, app.Logger).WithMinimumFees(app.minimumFees),
 	}
 }
 
@@ -386,7 +389,8 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) (res 
 		sdk.ErrUnknownRequest(fmt.Sprintf("no custom querier found for route %s", path[1])).QueryResult()
 	}
 
-	ctx := sdk.NewContext(app.cms.CacheMultiStore(), app.checkState.ctx.BlockHeader(), true, app.Logger)
+	ctx := sdk.NewContext(app.cms.CacheMultiStore(), app.checkState.ctx.BlockHeader(), true, app.Logger).
+		WithMinimumFees(app.minimumFees)
 	// Passes the rest of the path as an argument to the querier.
 	// For example, in the path "custom/gov/proposal/test", the gov querier gets []string{"proposal", "test"} as the path
 	resBytes, err := querier(ctx, path[2:], req)

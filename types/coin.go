@@ -77,6 +77,11 @@ func (coin Coin) Minus(coinB Coin) Coin {
 	return Coin{coin.Denom, coin.Amount.Sub(coinB.Amount)}
 }
 
+// Mul makes a new coin and sets Amount to the product coin.Amount*m.
+func (coin Coin) Mul(m Int) Coin {
+	return Coin{coin.Denom, coin.Amount.Mul(m)}
+}
+
 //----------------------------------------
 // Coins
 
@@ -168,6 +173,20 @@ func (coins Coins) Negative() Coins {
 // Minus subtracts a set of coins from another (adds the inverse)
 func (coins Coins) Minus(coinsB Coins) Coins {
 	return coins.Plus(coinsB.Negative())
+}
+
+// Mul multiplies a set of coin by a given factor.
+// CONTRACT: Mul will never return Coins where one Coin has a 0 amount.
+func (coins Coins) Mul(m Int) Coins {
+	res := make([]Coin, 0, len(coins))
+	for _, coin := range coins {
+		if coin.Mul(m).IsZero() {
+			// ignore 0 sum coin type
+		} else {
+			res = append(res, coin.Mul(m))
+		}
+	}
+	return res
 }
 
 // IsGTE returns True iff coins is NonNegative(), and for every

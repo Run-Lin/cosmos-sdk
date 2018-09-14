@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	deductFeesCost      sdk.Gas = 10
-	memoCostPerByte     sdk.Gas = 1
-	ed25519VerifyCost           = 59
-	secp256k1VerifyCost         = 100
-	maxMemoCharacters           = 100
+	deductFeesCost        sdk.Gas = 10
+	memoCostPerByte       sdk.Gas = 1
+	ed25519VerifyCost             = 59
+	secp256k1VerifyCost           = 100
+	maxMemoCharacters             = 100
+	feeDeductionGasFactor         = 0.001
 )
 
 // NewAnteHandler returns an AnteHandler that checks
@@ -95,8 +96,15 @@ func NewAnteHandler(am AccountMapper, fck FeeCollectionKeeper) sdk.AnteHandler {
 			}
 
 			// first sig pays the fees
-			// TODO: Add min fees
 			// Can this function be moved outside of the loop?
+			if ctx.IsCheckTx() && !simulate {
+				// required fees must be greater than the minimum set by the validator
+				if ctx.MinimumFees().Minus(fee.Amount).IsNotNegative() {
+					fee = NewStdFee(fee.Gas, ctx.MinimumFees()...)
+				}
+				// validators reject any tx from the mempool with less than the required fee per gas * gas factor
+				fee = NewStdFee(fee.Gas, calculateFeesByGas(fee.Amount, fee.Gas)...)
+			}
 			if i == 0 && !fee.Amount.IsZero() {
 				newCtx.GasMeter().ConsumeGas(deductFeesCost, "deductFees")
 				signerAcc, res = deductFees(signerAcc, fee)
@@ -234,6 +242,15 @@ func consumeSignatureVerificationGas(meter sdk.GasMeter, pubkey crypto.PubKey) {
 	default:
 		panic("Unrecognized signature type")
 	}
+}
+
+func calculateFeesByGas(fees sdk.Coins, gas int64) sdk.Coins {
+	gasCost := int64(float64(gas) * feeDeductionGasFactor)
+	gasFees := make(sdk.Coins, len(fees))
+	for i := 0; i < len(fees); i++ {
+		gasFees[i] = sdk.NewInt64Coin(fees[i].Denom, gasCost)
+	}
+	return fees.Plus(gasFees)
 }
 
 // Deduct the fee from the account.

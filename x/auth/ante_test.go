@@ -627,3 +627,26 @@ func TestConsumeSignatureVerificationGas(t *testing.T) {
 		})
 	}
 }
+
+func TestCalculateFeesByGas(t *testing.T) {
+	type args struct {
+		fees sdk.Coins
+		gas  int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want sdk.Coins
+	}{
+		{"nil coins", args{sdk.Coins{}, 10000}, sdk.Coins{}},
+		{"nil coins", args{sdk.Coins{sdk.NewInt64Coin("A", 10), sdk.NewInt64Coin("B", 0)}, 10000},
+			sdk.Coins{sdk.NewInt64Coin("A", 20), sdk.NewInt64Coin("B", 10)}},
+		{"negative coins", args{sdk.Coins{sdk.NewInt64Coin("A", -10), sdk.NewInt64Coin("B", 10)}, 10000}, sdk.Coins{sdk.NewInt64Coin("B", 20)}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calculateFeesByGas(tt.args.fees, tt.args.gas)
+			require.True(t, tt.want.IsEqual(got))
+		})
+	}
+}
