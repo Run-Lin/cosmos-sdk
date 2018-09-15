@@ -120,22 +120,6 @@ func TestPlusCoin(t *testing.T) {
 	require.Equal(t, tc.expected, res.Amount.Int64())
 }
 
-func TestMulCoin(t *testing.T) {
-	cases := []struct {
-		inputOne   Coin
-		multiplier Int
-		expected   Coin
-	}{
-		{NewInt64Coin("A", 1), NewInt(0), NewInt64Coin("A", 0)},
-		{NewInt64Coin("A", 1), NewInt(-3), NewInt64Coin("A", -3)},
-		{NewInt64Coin("A", 0), NewInt(1), NewInt64Coin("A", 0)},
-		{NewInt64Coin("A", -1), NewInt(-3), NewInt64Coin("A", 3)},
-	}
-	for tcIndex, tc := range cases {
-		require.Equal(t, tc.expected, tc.inputOne.Mul(tc.multiplier), "multiplication of coins is incorrect, tc #%d", tcIndex)
-	}
-}
-
 func TestMinusCoin(t *testing.T) {
 	cases := []struct {
 		inputOne Coin
@@ -274,30 +258,6 @@ func TestPlusCoins(t *testing.T) {
 		res := tc.inputOne.Plus(tc.inputTwo)
 		assert.True(t, res.IsValid())
 		require.Equal(t, tc.expected, res, "sum of coins is incorrect, tc #%d", tcIndex)
-	}
-}
-
-func TestMulCoins(t *testing.T) {
-	one := NewInt(1)
-	zero := NewInt(0)
-	negone := NewInt(-1)
-	two := NewInt(2)
-
-	cases := []struct {
-		inputOne   Coins
-		multiplier Int
-		expected   Coins
-	}{
-		{Coins{{"A", two}, {"B", one}}, NewInt(0), Coins{}},
-		{Coins{{"A", one}, {"B", one}}, NewInt(1), Coins{{"A", one}, {"B", one}}},
-		{Coins{{"A", one}, {"B", zero}}, NewInt(-1), Coins{{"A", negone}}},
-		{Coins{{"A", one}, {"B", negone}}, NewInt(-1), Coins{{"A", negone}, {"B", one}}},
-	}
-
-	for tcIndex, tc := range cases {
-		res := tc.inputOne.Mul(tc.multiplier)
-		assert.True(t, res.IsValid())
-		require.Equal(t, tc.expected, res, "multiplication of coins is incorrect, tc #%d", tcIndex)
 	}
 }
 
