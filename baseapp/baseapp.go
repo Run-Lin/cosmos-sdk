@@ -220,7 +220,7 @@ func (app *BaseApp) setDeliverState(header abci.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.deliverState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.Logger).WithMinimumFees(app.minimumFees),
+		ctx: sdk.NewContext(ms, header, false, app.Logger),
 	}
 }
 
